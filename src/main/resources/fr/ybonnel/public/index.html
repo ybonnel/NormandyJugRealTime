@@ -19,7 +19,20 @@
     </div>
 
     <ul>
-        <li ng-repeat="tweet in tweets">{{tweet}}</li>
+        <li ng-repeat="tweet in tweets">
+            <div class="tweet">
+                <div class="user">
+                    <div class="avatar">
+                        <img ng-src="{{tweet.avatar}}"/>
+                    </div>
+                    <div class="name">@{{tweet.user}}</div>
+                </div>
+                <img class="photo" ng-src="{{tweet.photo}}"/>
+                <div class="text">
+                    {{tweet.text}}
+                </div>
+            </div>
+        </li>
     </ul>
 
 </div>
