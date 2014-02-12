@@ -17,6 +17,9 @@
 package fr.ybonnel;
 
 
+import fr.ybonnel.simpleweb4j.handlers.Response;
+import fr.ybonnel.simpleweb4j.handlers.eventsource.ReactiveStream;
+
 import static fr.ybonnel.simpleweb4j.SimpleWeb4j.*;
 
 public class Main {
@@ -39,7 +42,9 @@ public class Main {
         setPort(getPort());
         setPublicResourcesPath("/fr/ybonnel/public");
 
+        TwitterListener listener = new TwitterListener("#Hollande").startConsumeTwitter();
 
+        get("tweet", (param, routeParams) -> new Response<ReactiveStream<String>>(listener::addHandler));
 
         start();
     }
