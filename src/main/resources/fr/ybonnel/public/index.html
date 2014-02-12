@@ -1,0 +1,50 @@
+<!DOCTYPE HTML>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <title>Tweet</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+    <link href="main.less" rel="stylesheet">
+
+</head>
+<body ng-app>
+
+
+<div id="container" ng-controller="TweetCtrl">
+
+    <div id="loading" ng-show="tweets.length == 0">
+        <div>Waiting tweets...</div>
+    </div>
+
+    <ul>
+        <li ng-repeat="tweet in tweets">{{tweet}}</li>
+    </ul>
+
+</div>
+
+
+
+
+<script src="/webjars/angularjs/1.2.8/angular.min.js"></script>
+<script type="text/javascript">
+    function TweetCtrl($scope) {
+
+        // the last received msg
+        $scope.tweets = [];
+
+        // handles the callback from the received event
+        var handleCallback = function (msg) {
+            $scope.$apply(function () {
+                $scope.tweets.push(JSON.parse(msg.data));
+            });
+        };
+
+        var source = new EventSource('/tweet');
+        source.addEventListener('message', handleCallback, false);
+
+    }
+</script>
+</body>
+</html>
