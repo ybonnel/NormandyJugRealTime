@@ -16,6 +16,7 @@
  */
 package fr.ybonnel;
 
+import fr.ybonnel.model.TweetPhoto;
 import fr.ybonnel.simpleweb4j.handlers.eventsource.EndOfStreamException;
 import fr.ybonnel.simpleweb4j.handlers.eventsource.ReactiveHandler;
 import twitter4j.FilterQuery;
@@ -42,24 +43,26 @@ public class TwitterListener extends StatusAdapter {
         return this;
     }
 
-    private Set<ReactiveHandler<String>> handlers = new HashSet<>();
+    private Set<ReactiveHandler<TweetPhoto>> handlers = new HashSet<>();
 
-    public void addHandler(ReactiveHandler<String> handler) {
+    public void addHandler(ReactiveHandler<TweetPhoto> handler) {
         handlers.add(handler);
     }
 
-    public void removeHandler(ReactiveHandler<String> handler) {
+    public void removeHandler(ReactiveHandler<TweetPhoto> handler) {
         handlers.remove(handler);
     }
 
     @Override
     public void onStatus(Status status) {
-        new HashSet<>(handlers).stream().forEach(handler -> sendTweetToHandler(handler, status.getText()));
+        TweetPhoto.fromStatus(status).forEach(
+                tweet -> new HashSet<>(handlers).stream().forEach(
+                        handler -> sendTweetToHandler(handler, tweet)));
     }
 
-    private void sendTweetToHandler(ReactiveHandler<String> handler, String text) {
+    private void sendTweetToHandler(ReactiveHandler<TweetPhoto> handler, TweetPhoto tweet) {
         try {
-            handler.next(text);
+            handler.next(tweet);
         }
         catch (EndOfStreamException e) {
             removeHandler(handler);

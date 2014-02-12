@@ -17,6 +17,7 @@
 package fr.ybonnel;
 
 
+import fr.ybonnel.model.TweetPhoto;
 import fr.ybonnel.simpleweb4j.handlers.Response;
 import fr.ybonnel.simpleweb4j.handlers.eventsource.ReactiveStream;
 
@@ -44,7 +45,7 @@ public class Main {
 
         TwitterListener listener = new TwitterListener("#Hollande").startConsumeTwitter();
 
-        get("tweet", (param, routeParams) -> new Response<ReactiveStream<String>>(listener::addHandler));
+        get("tweet", (param, routeParams) -> new Response<ReactiveStream<TweetPhoto>>(listener::addHandler));
 
         start();
     }
