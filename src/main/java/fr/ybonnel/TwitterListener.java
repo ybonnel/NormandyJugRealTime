@@ -27,13 +27,20 @@ import twitter4j.TwitterStreamFactory;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 public class TwitterListener extends StatusAdapter {
 
     private final String filter;
     private final Consumer<String> onShutdown;
     private final TwitterStream twitterStream;
+    private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+    private ConcurrentLinkedQueue<TweetPhoto> tweetToSend = new ConcurrentLinkedQueue<>();
 
     public TwitterListener(String filter, Consumer<String> onShutdown) {
         this.filter = filter;
@@ -41,6 +48,12 @@ public class TwitterListener extends StatusAdapter {
         twitterStream = new TwitterStreamFactory().getInstance();
         twitterStream.addListener(this);
         twitterStream.filter(new FilterQuery().track(new String[]{filter}));
+        this.executor.scheduleAtFixedRate(() -> {
+            TweetPhoto tweet = tweetToSend.poll();
+            if (tweet != null) {
+                new HashSet<>(handlers).stream().forEach(handler -> sendTweetToHandler(handler, tweet));
+            }
+        }, 1000, 1000, TimeUnit.MILLISECONDS);
     }
 
     private Set<ReactiveHandler<TweetPhoto>> handlers = new HashSet<>();
@@ -52,6 +65,7 @@ public class TwitterListener extends StatusAdapter {
     public void removeHandler(ReactiveHandler<TweetPhoto> handler) {
         handlers.remove(handler);
         if (handlers.isEmpty()) {
+            executor.shutdownNow();
             onShutdown.accept(filter);
             twitterStream.shutdown();
         }
@@ -59,9 +73,7 @@ public class TwitterListener extends StatusAdapter {
 
     @Override
     public void onStatus(Status status) {
-        TweetPhoto.fromStatus(status).forEach(
-                tweet -> new HashSet<>(handlers).stream().forEach(
-                        handler -> sendTweetToHandler(handler, tweet)));
+        tweetToSend.addAll(TweetPhoto.fromStatus(status).collect(Collectors.toList()));
     }
 
     private void sendTweetToHandler(ReactiveHandler<TweetPhoto> handler, TweetPhoto tweet) {
