@@ -43,9 +43,10 @@ public class Main {
         setPort(getPort());
         setPublicResourcesPath("/fr/ybonnel/public");
 
-        TwitterListener listener = new TwitterListener("#Hollande").startConsumeTwitter();
+        TwitterListeners listeners = new TwitterListeners();
 
-        get("tweet", (param, routeParams) -> new Response<ReactiveStream<TweetPhoto>>(listener::addHandler));
+        get("tweet/:keyWord", (param, routeParams) -> new Response<ReactiveStream<TweetPhoto>>(
+                handler -> listeners.addHandlerForKeyWord(handler, routeParams.getParam("keyWord"))));
 
         start();
     }

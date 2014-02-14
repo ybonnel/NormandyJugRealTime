@@ -14,8 +14,18 @@
 
 <div id="container" ng-controller="TweetCtrl">
 
+    <div class="search">
+        <form>
+        <span>
+            <input id="keyword" type="search" ng-model="keyword" placeholder="Keyword">
+            <input type="submit" value="Search" ng-click="changeKeyWord(keyword)">
+        </span>
+        </form>
+    </div>
+
     <div id="loading" ng-show="tweets.length == 0">
-        <div>Waiting tweets...</div>
+        <div ng-show="source !== undefined">Waiting tweets...</div>
+        <div ng-show="source === undefined">Waiting keyword...</div>
     </div>
 
     <ul>
@@ -51,11 +61,19 @@
         var handleCallback = function (msg) {
             $scope.$apply(function () {
                 $scope.tweets.push(JSON.parse(msg.data));
+                if ($scope.tweets.length > 50) {
+                    $scope.tweets.shift();
+                }
             });
         };
 
-        var source = new EventSource('/tweet');
-        source.addEventListener('message', handleCallback, false);
+        $scope.changeKeyWord = function(keyWord) {
+            if ($scope.source !== undefined) {
+                $scope.source.close();
+            }
+            $scope.source = new EventSource('/tweet/' + keyWord);
+            $scope.source.addEventListener('message', handleCallback, false);
+        };
 
     }
 </script>

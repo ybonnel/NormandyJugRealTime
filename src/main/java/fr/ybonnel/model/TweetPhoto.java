@@ -28,6 +28,7 @@ public class TweetPhoto {
     private final String text;
 
     public TweetPhoto(String user, String avatar, String photo, String text) {
+        System.err.println("New Tweet");
         this.user = user;
         this.avatar = avatar;
         this.photo = photo;
@@ -38,9 +39,9 @@ public class TweetPhoto {
         String user = status.getUser().getScreenName();
         String avatar = status.getUser().getBiggerProfileImageURL();
         String text = status.getText();
-        if (status.getMediaEntities().length == 0) {
+        /*if (status.getMediaEntities().length == 0) {
             return Stream.of(new TweetPhoto(user, avatar, "http://placehold.it/400x300", text));
-        }
+        }*/
         return Arrays.stream(status.getMediaEntities()).map(media ->
             new TweetPhoto(user, avatar, media.getMediaURL(), text)
         );

@@ -27,20 +27,20 @@ import twitter4j.TwitterStreamFactory;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.Consumer;
 
 public class TwitterListener extends StatusAdapter {
 
-    private String filter;
+    private final String filter;
+    private final Consumer<String> onShutdown;
+    private final TwitterStream twitterStream;
 
-    public TwitterListener(String filter) {
+    public TwitterListener(String filter, Consumer<String> onShutdown) {
         this.filter = filter;
-    }
-
-    public TwitterListener startConsumeTwitter() {
-        TwitterStream twitterStream = new TwitterStreamFactory().getInstance();
+        this.onShutdown = onShutdown;
+        twitterStream = new TwitterStreamFactory().getInstance();
         twitterStream.addListener(this);
         twitterStream.filter(new FilterQuery().track(new String[]{filter}));
-        return this;
     }
 
     private Set<ReactiveHandler<TweetPhoto>> handlers = new HashSet<>();
@@ -51,6 +51,10 @@ public class TwitterListener extends StatusAdapter {
 
     public void removeHandler(ReactiveHandler<TweetPhoto> handler) {
         handlers.remove(handler);
+        if (handlers.isEmpty()) {
+            onShutdown.accept(filter);
+            twitterStream.shutdown();
+        }
     }
 
     @Override
