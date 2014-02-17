@@ -4,9 +4,9 @@
     <head>
         <meta charset="utf-8">
 
-        <title>SimpleWeb4j</title>
+        <title>SimpleWeb4j - Web Temps Réel</title>
 
-        <meta name="author" content="Hakim El Hattab">
+        <meta name="author" content="Yan Bonnel">
 
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -49,14 +49,14 @@
         <div class="reveal">
             <div class="slides">
                 <section>
-                    <h1>SimpleWeb4j</h1>
+                    <h1>Web temps réel avec SimpleWeb4j</h1>
                 </section>
                 <section>
                     <section>
                         <h2>&lt;me&gt;</h2>
                     </section>
                     <section>
-                        <p>Développeur Java chez Sopra Group depuis 7 ans<br/><br/></p>
+                        <p>Développeur Java chez Sopra Group depuis 8 ans<br/><br/></p>
                         <p>Développeur Android la nuit :</p>
                         <ul>
                             <li>
@@ -105,149 +105,181 @@
                         </ul>
                     </section>
                     <section>
+                        <p>En ce moment :</p>
+                        <img src="img/cartons.jpg">
+                    </section>
+                    <section>
                         <h2>&lt;/ME&gt;</h2>
                     </section>
                 </section>
                 <section>
                     <section>
-                        <h2>SimpleWeb4j, c'est quoi?</h2>
-                        <p class="fragment">Encore un framework web!</p>
-                    </section>
-                    <section>
-                        <h2>Pourquoi encore un?</h2>
-                        <p class="fragment">Mouvance MVC Client</p>
-                        <p class="fragment">Léger</p>
-                        <p class="fragment">Rapide à mettre en place</p>
-                        <p class="fragment">Facile à deployer</p>
-                    </section>
-                </section>
-                <section>
-                    <section>
                         <h2>Application Démo</h2>
-                        <p>Gestion d'une carte de cidre</p>
+                        <p>Push temps réel de tweets</p>
                     </section>
                     <section>
                         <h3>Fonctionnalités :</h3>
-                        <p class="fragment">CRUD des cidres</p>
-                        <p class="fragment">Affichage de la carte</p>
-                        <p class="fragment">Gestion des utilisateurs <span class="fragment" style="font-size:18px">(si on a le temps)</span></p>
+                        <p class="fragment">Connection à l'API de stream de twitter</p>
+                        <p class="fragment">Push dans le navigateur</p>
+                        <p class="fragment">Filtre des tweets</p>
+                        <p class="fragment">Ajout de délai dans le push <span class="fragment" style="font-size:18px">(si on a le temps)</span></p>
+                    </section>
+                    <section>
+                        <h3>Technologies utilisées :</h3>
+                        <p class="fragment">Twitter4j</p>
+                        <p class="fragment">Event Source (ou Server Sent Event)</p>
+                        <p class="fragment">Java8 : Lambda et Stream</p>
+                        <p class="fragment">Angular.js</p>
+                        <p class="fragment">SimpleWeb4j</p>
                     </section>
                 </section>
                 <section>
                     <section>
-                        <h2>Création du projet</h2>
-                        <div>Utilisation du clickstart cloudbees</div>
+                        <h2>Création d'une API de stream</h2>
+                        <div>Doit renvoyer des tweets sur l'URL /tweet</div>
                     </section>
                     <section>
-                        <a href="https://grandcentral.cloudbees.com/#doClickStart"
-                           target="_blank">
-                            https://grandcentral.cloudbees.com/#doClickStart
-                        </a>
+                        <p>Listenner Twitter</p>
+                        <pre class="fragment"><code class="java">TwitterStream twitterStream = new TwitterStreamFactory().getInstance();
+twitterStream.addListener(this);
+twitterStream.filter(new FilterQuery().track(new String[]{filter}));</code></pre>
+
+                        <p class="fragment">Gestion des tweet</p>
+                        <pre class="fragment"><code class="java">public void onStatus(Status status) {
+    new HashSet&lt;&gt;(handlers).stream()
+        .forEach(handler -> sendTweetToHandler(handler, status.getText()));
+}
+
+private void sendTweetToHandler(ReactiveHandler&lt;String&gt; handler,
+                                String text) {
+    try {
+        handler.next(text);
+    } catch (EndOfStreamException e) {
+        removeHandler(handler);
+    }
+}</code></pre>
+                        <p class="fragment">Création de l'API Server Sent Event</p>
+                        <pre class="fragment"><code class="java">TwitterListenner listenner = new TwitterListenner("#Hollande")
+    .startConsumeTwitter();
+get("tweet", (param, routeParams) ->
+    new Response&lt;ReactiveStream&lt;String&gt;&gt;(listenner::addHandler));</code></pre>
                     </section>
                 </section>
                 <section>
                     <section>
-                        <h2>Création des resources</h2>
-                        <br/>
-                        <div class="fragment">
-                            <h3>Besoins :</h3>
-                            <ul>
-                                <li>Un service getById</li>
-                                <li>Un service getAll</li>
-                                <li>Un service update</li>
-                                <li>Un service create</li>
-                                <li>Un service delete</li>
-                            </ul>
-                        </div>
+                        <h3>Consommation de l'api de stream</h3>
+                        <p>Utilisation de EventSource</p>
                     </section>
                     <section>
-                        <p>SimpleWeb4j.resource()</p>
-                        <pre class="fragment"><code class="java">SimpleWeb4j.resource(new CidreResource("cidre"));</code></pre>
-                        <p>Test via Http</p>
-                        <pre class="fragment"><code class="java">public class CidreTest extends SimpleWeb4jTest {
-    @Before
-    public void setup() {
-        Main.startServer(getPort(), false);
+                        <p>Création du controller Angular</p>
+                        <pre class="fragment"><code class="javascript">function TweetCtrl($scope) {
+    $scope.tweets = [];
+
+    // handles the callback from the received event
+    var handleCallback = function (msg) {
+        $scope.$apply(function () {
+            $scope.tweets.push(JSON.parse(msg.data));
+        });
+    };
+
+    var source = new EventSource('/tweet');
+    source.addEventListener('message', handleCallback, false);
+}</code></pre>
+                        <p class="fragment">Affichage des tweets</p>
+                        <pre class="fragment"><code class="html">&lt;div ng-controller="TweetCtrl"&gt;
+    &lt;ul&gt;
+        &lt;li ng-repeat="tweet in tweets"&gt;{{tweet}}&lt;/li&gt;
+    &lt;/ul&gt;
+&lt;/div&gt;</code></pre>
+                    </section>
+                </section>
+                <section>
+                    <section>
+                        <h3>Utilisation des photos</h3>
+                        <p class="fragment">Récupération des tweets avec photos</p>
+                    </section>
+                    <section>
+                        <p>Création de la class TweetPhoto</p>
+                        <pre class="fragment"><code class="java">public class TweetPhoto {
+    private final String user;
+    private final String avatar;
+    private final String photo;
+    private final String text;
+
+    public TweetPhoto(String user, String avatar,
+                      String photo, String text) {
+        this.user = user;
+        this.avatar = avatar;
+        this.photo = photo;
+        this.text = text;
     }
-    @After
-    public void tearDown() {
-        stop();
+}</code></pre>
+                    </section>
+                    <section>
+                       <p>Transformation d'un tweet en TweetPhoto</p>
+                       <pre class="fragment"><code class="java">public static Stream&lt;TweetPhoto&gt; fromStatus(Status status) {
+    String user = status.getUser().getScreenName();
+    String avatar = status.getUser().getBiggerProfileImageURL();
+    String text = status.getText();
+    if (status.getMediaEntities().length == 0) {
+        return Stream.of(
+            new TweetPhoto(user, avatar,
+                "http://placehold.it/400x300", text));
     }
-    @Test
-    public void should_return_no_cidre() {
-        List&lt;Cidre&gt; cidres = new Gson().fromJson(
-                HttpRequest.get(defaultUrl() + "/cidre").body(),
-                new TypeToken&lt;List&lt;Cidre&gt;&gt;(){}.getType());
-        assertTrue(cidres.isEmpty());
+    return Arrays.stream(status.getMediaEntities()).map(media ->
+        new TweetPhoto(user, avatar, media.getMediaURL(), text)
+    );
+}</code></pre>
+                    </section>
+                    <section>
+                        <p>Modifications du listenner</p>
+                        <pre class="fragment"><code class="java">public void onStatus(Status status) {
+    TweetPhoto.fromStatus(status).forEach(
+        tweet -&gt; new HashSet&lt;&gt;(handlers).stream().forEach(
+            handler -&gt; sendTweetToHandler(handler, tweet)));
+}
+
+private void sendTweetToHandler(ReactiveHandler&lt;TweetPhoto&gt; handler,
+                                TweetPhoto tweet) {
+    try {
+        handler.next(tweet);
+    }
+    catch (EndOfStreamException e) {
+        removeHandler(handler);
     }
 }</code></pre>
                     </section>
                 </section>
                 <section>
                     <section>
-                        <h2>IHM</h2>
-                        <br/>
-                        <h3 class="fragment">Vive Angular!</h3>
-                    </section>
-                </section>
-                <section>
-                    <h2>Tests IHM</h2>
-                    <pre class="fragment"><code class="java">public class CidreWebTest extends SimpleWeb4jTest {
-    @Before
-    public void setup() {
-        Main.startServer(getPort(), false);
-        goTo("/");
-    }
-    @After
-    public void tearDown() {
-        stop();
-    }
-    @Test
-    public void should_not_have_cidre() {
-        assertThat(find("tbody tr")).isEmpty();
-    }
-}</code></pre>
-                </section>
-                <section>
-                    <section>
-                        <h2>Filters</h2>
-                        <br/>
-                        <p>Filtre à appliquer sur toutes les requètes (exemple : sécurité)</p>
-                    </section>
-                    <section>
-                        <h4>Création d'un AbstractFilter</h4>
-                        <pre class="fragment"><code class="java">public class SecurityFilter extends AbstractFilter {
-    @Override
-    public void handle(Route route, RouteParameters routeParams)
-            throws HttpErrorException {
-        if (!"admin".equals(routeParams.getParam("login"))
-                || !"admin".equals(routeParams.getParam("password"))) {
-            throw new HttpErrorException(
-                    HttpServletResponse.SC_UNAUTHORIZED);
-        }
-    }
-}</code></pre>
-                        <h4>Ajout du filtre à SimpleWeb4j</h4>
-                        <pre class="fragment"><code class="java">SimpleWeb4j.addFilter(new SecurityFilter());</code></pre>
+                        <h3>Affichage des photos</h3>
+                        <pre class="fragment"><code class="html">&lt;div ng-controller="TweetCtrl"&gt;
+    &lt;ul&gt;
+        &lt;div class="tweet"&gt;
+            &lt;div class="user"&gt;
+                &lt;div class="avatar"&gt;
+                    &lt;img ng-src="{{tweet.avatar}}"/&gt;
+                &lt;/div&gt;
+                &lt;div class="name"&gt;@{{tweet.user}}&lt;/div&gt;
+            &lt;/div&gt;
+            &lt;img class="photo" ng-src="{{tweet.photo}}"/&gt;
+            &lt;div class="text"&gt;{{tweet.text}}&lt;/div&gt;
+        &lt;/div&gt;
+        &lt;/li&gt;
+    &lt;/ul&gt;
+&lt;/div&gt;</code></pre>
                     </section>
                 </section>
                 <section>
                     <section>
-                        <h2>Accès cross-site</h2>
-                        <p>Création d'un site hébergé ailleur utilisant le backend SompleWeb4j</p>
+                        <h3>Choix du mot clé</h3>
+                        <p class="fragment">Le mot clé en dur, c'est quand même pas terrible...</p>
                     </section>
+                </section>
+                <section>
                     <section>
-                        <h4>Ajout d'un service JSONP</h4>
-                        <pre class="fragment"><code class="java">Route&lt;Void, List&lt;Cidre&gt;&gt; jsonpRoute =
-        new Route&lt;&gt;("/jsonp/cidre", Void.class) {
-    @Override
-    public Response&lt;List&lt;Cidre&gt;&gt; handle(
-            Void param, RouteParameters routeParameters) {
-        return cidreRessource.getAll();
-    }
-};
-jsonp("CALLBACK", jsonpRoute);
-</code></pre>
+                        <h3>Ajout de délai</h3>
+                        <p class="fragment">Plutôt que d'envoyer dès qu'on a un tweet, on va faire du polling côté serveur.</p>
                     </section>
                 </section>
                 <section>
@@ -257,20 +289,21 @@ jsonp("CALLBACK", jsonpRoute);
                     <h2>Liens :</h2>
                     <ul>
                         <li>SimpleWeb4j : <a href="https://github.com/ybonnel/SimpleWeb4j">ybonnel/SimpleWeb4j</a></li>
-                        <li>Slides : <a href="http://ybonnel.github.io/simpleweb4j-slides">ybonnel.github.io/simpleweb4j-slides</a></li>
-                        <li>Démo : <a href="https://github.com/ybonnel/simpleweb4j-normandyjug-demo">ybonnel/simpleweb4j-normandyjug-demo</a></li>
+                        <li>Slides : <a href="http://ybonnel.github.io/NormandyJugRealTime">ybonnel.github.io/NormandyJugRealTime</a></li>
+                        <li>Démo : <a href="https://github.com/ybonnel/NormandyJugRealTime">ybonnel/NormandyJugRealTime</a></li>
                     </ul>
                 </section>
             </div>
         </div>
 
         <div class="footer">
-            <p class="note slide4 invisible">step0</p>
-            <p class="note slide5 invisible">step1</p>
-            <p class="note slide6 invisible">step2</p>
-            <p class="note slide7 invisible">step2</p>
-            <p class="note slide8 invisible">step3</p>
-            <p class="note slide9 invisible">step4</p>
+            <p class="note slide2 invisible">step0</p>
+            <p class="note slide3 invisible">step1</p>
+            <p class="note slide4 invisible">step2</p>
+            <p class="note slide5 invisible">step3</p>
+            <p class="note slide6 invisible">step4</p>
+            <p class="note slide7 invisible">step5</p>
+            <p class="note slide8 invisible">step6</p>
         </div>
 
         <div style="display:block;position:absolute;bottom:0;left:0;margin:25px">
