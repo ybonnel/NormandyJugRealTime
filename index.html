@@ -139,7 +139,7 @@
                         <div>Doit renvoyer des tweets sur l'URL /tweet</div>
                     </section>
                     <section>
-                        <p>Listenner Twitter</p>
+                        <p>Listener Twitter</p>
                         <pre class="fragment"><code class="java">TwitterStream twitterStream = new TwitterStreamFactory().getInstance();
 twitterStream.addListener(this);
 twitterStream.filter(new FilterQuery().track(new String[]{filter}));</code></pre>
@@ -159,10 +159,10 @@ private void sendTweetToHandler(ReactiveHandler&lt;String&gt; handler,
     }
 }</code></pre>
                         <p class="fragment">Création de l'API Server Sent Event</p>
-                        <pre class="fragment"><code class="java">TwitterListenner listenner = new TwitterListenner("#Hollande")
+                        <pre class="fragment"><code class="java">TwitterListener listener = new TwitterListener("#Hollande")
     .startConsumeTwitter();
 get("tweet", (param, routeParams) ->
-    new Response&lt;ReactiveStream&lt;String&gt;&gt;(listenner::addHandler));</code></pre>
+    new Response&lt;ReactiveStream&lt;String&gt;&gt;(listener::addHandler));</code></pre>
                     </section>
                 </section>
                 <section>
@@ -232,7 +232,7 @@ get("tweet", (param, routeParams) ->
 }</code></pre>
                     </section>
                     <section>
-                        <p>Modifications du listenner</p>
+                        <p>Modifications du listener</p>
                         <pre class="fragment"><code class="java">public void onStatus(Status status) {
     TweetPhoto.fromStatus(status).forEach(
         tweet -&gt; new HashSet&lt;&gt;(handlers).stream().forEach(
